@@ -75,7 +75,3 @@ std::vector<std::vector<std::complex<double>>> read_from_csv(std::ofstream input
 	//TODO: read in matrix from a csv file
 	return ret;
 }
-// defining some gates
-std::vector<std::vector<std::complex<double>>> cx_matrix;
-
-Gate cnot = Gate("cx", 4, cx_matrix, "Controlled NOT gate");
