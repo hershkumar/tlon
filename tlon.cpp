@@ -3,7 +3,8 @@
 #include <panel.h>
 #include "math.cpp"
 #include "gates.cpp"
-
+#include "config.cpp"
+#include "log.cpp"
 // height and width of the terminal screen
 int term_height;
 int term_width;
@@ -36,6 +37,7 @@ int shutdown()
 	clear();
 	// end the ncurses session
 	endwin();
+	//TODO: remember to close the file pointer for the log file
 	return 0;
 }
 
