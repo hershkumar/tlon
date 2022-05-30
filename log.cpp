@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <chrono>
 
 class Logger {
 	public:
@@ -14,8 +15,14 @@ class Logger {
 		std::string ts()
 		{
 			std::string ret;
-			//TODO: get timestamp and format it
+			//TODO: get the timestamp formatted correctly
 			ret.append(": ");
+			return ret;
+		}
+		
+		Logger()
+		{
+			initialized = false;
 		}
 		
 		Logger(std::string filename)
@@ -27,7 +34,10 @@ class Logger {
 		}		
 
 		//TODO: function to log a matrix to a file
-
+		int log_matrix(std::vector<std::vector<std::complex<double>>>)
+		{
+			return 0;
+		}
 		//TODO function that logs a circuit diagram to a file
 
 		//TODO: function to log any string to the log file
@@ -39,6 +49,13 @@ class Logger {
 			}
 			file << ts() << str << std::endl;
 			return 0;
+		}
+
+		//function that closes the log file
+		void close()
+		{
+			file.close();
+			initialized = false;
 		}
 };
 

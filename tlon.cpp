@@ -8,6 +8,8 @@
 // height and width of the terminal screen
 int term_height;
 int term_width;
+//Instantiate the logger object with a dummy filename
+Logger log_obj = Logger();
 
 // setup the curses session
 int curses_setup()
@@ -25,11 +27,18 @@ int curses_setup()
 	// get the terminal size
 	getmaxyx(stdscr, term_width, term_height);
 	getch();
-	// make a window the size of the screen
-	//WINDOW * win = newwin(term_height, term_width, 0, 0);
+
 	return 0;
 }
-
+int setup()
+{
+	curses_setup();
+	read_config();
+	
+	// open the log file
+	Logger log_obj = Logger(get_log_filename());
+	return 0;
+}
 // function that shuts down the program
 int shutdown()
 {
@@ -37,17 +46,22 @@ int shutdown()
 	clear();
 	// end the ncurses session
 	endwin();
-	//TODO: remember to close the file pointer for the log file
+	// Close the config file
+	config_close();
+	// Close the log file
+	log_obj.log_string("Closing Logger object");
+	log_obj.close();
 	return 0;
 }
 
 int main(int argc, char const *argv[])
 {
-	// set the curses system up
-	curses_setup();
-   	// main control body goes here 
-
+	// Call the setup function
+	setup();
+   	// main control body goes here
+	
 	// shut down the program
+	log_obj.log_string("Shutting down tlon...");
 	shutdown();
 	return 0;
 }
