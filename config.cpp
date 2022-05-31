@@ -17,6 +17,9 @@ void read_config(){
 	//TODO: read through the file line by line and store each setting
 	std::string curr_line;
 	while(getline(config_file, curr_line)){
+		// parse the line
+		// add the line as a key value pair in the settings map
+		
 	}
 }
 
