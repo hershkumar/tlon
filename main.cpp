@@ -25,10 +25,21 @@ sf::Text fps(double frame_num, sf::Font font) {
 }
 
 
+sf::Text printDrawn(int num, sf::Font font){
+    sf::Text drawn_text;
+    drawn_text.setFont(font);
+    drawn_text.setString(std::to_string(num));
+    drawn_text.setCharacterSize(15);
+    drawn_text.setFillColor(sf::Color::Red);
+    drawn_text.setStyle(sf::Text::Bold);
+    drawn_text.setPosition({0, 20});
+    return drawn_text;
+}
+
 class Circle {
     public:
         // radius of the circle
-        float radius = 10.f;
+        float radius = 15.f;
         // current position as a vector
         sf::Vector2f pos;
         // old position as a vector
@@ -39,7 +50,8 @@ class Circle {
         sf::CircleShape shape;
         // the color
         sf::Color color = sf::Color::White;
-
+        // whether the circle has been drawn onto the window
+        bool drawn;
         Circle(){
             shape.setRadius(radius);
             shape.setFillColor(color);
@@ -56,6 +68,7 @@ class Circle {
         // update the shape position
         void updateShape(){
             shape.setPosition(pos);
+            shape.setFillColor(color);
         }
         // verlet integration for position update
         void updatePosition(float dt){
@@ -81,26 +94,33 @@ class Simulator{
         // the circles
         std::vector<Circle> circles;
         // the force to be applied
-        sf::Vector2f force = {0.0, 1.0f};
+        sf::Vector2f force = {0, 1.0f};
         // number of circles
-        int num_circles = 5;
+        int num_circles = 2000;
         // the time step
         float dt = 0.01f;
 
         // bounding circle
-        float bounding_radius = 350.f;
+        float bounding_radius = 375.f;
         // bounding circle bg_color
         sf::Color bounding_color = sf::Color::Black;
+        // shape for the bounding circle
         sf::CircleShape bounding_circle = sf::CircleShape(bounding_radius);
-        
+        // center of the screen
         sf::Vector2f center = {static_cast<float>(WINDOW_WIDTH/2.0), static_cast<float>( WINDOW_HEIGHT/2.0)};
+        // number of currently drawn circles
+        int num_drawn = 0;
+        // number of substeps
+        int substeps = 1;
 
     Simulator() {
         // create the circles
         for (int i = 0; i < num_circles; i++){
             Circle circle;
-            circle.pos = {static_cast<float>(WINDOW_WIDTH/2.0) + 40.0f, static_cast<float>( WINDOW_HEIGHT/2.0)};
-            circle.old_pos = {static_cast<float>(WINDOW_WIDTH/2.0), static_cast<float>( WINDOW_HEIGHT/2.0)};
+            circle.shape.setOrigin({circle.radius, circle.radius});
+            circle.pos = {static_cast<float>(WINDOW_WIDTH/2.0), static_cast<float>(WINDOW_HEIGHT/2.0) - 200.0};
+            circle.old_pos = circle.pos;
+            circle.drawn = false;
             circles.push_back(circle);
         }
 
@@ -119,44 +139,73 @@ class Simulator{
         Simulator();
     }
 
-    
+    //TODO: substep this like in the video
     void update(float dt) {
-        // for each circle, apply the force and then update the position
-        for (int i = 0; i < num_circles; i++){
-            applyForce(circles[i]);
-            applyConstraint(circles[i]);
-            circles[i].updatePosition(dt);
-        }    
+        float sdt = dt / static_cast<float>(substeps);
+        for (int i = 0; i < substeps; i++){
+            applyForce();
+            applyConstraint();
+            checkCollisions();
+            updateAllPositions(sdt);
+        }
     }
 
-    void applyForce(Circle &circle){
+    void updateAllPositions(float dt){
+        for (int i = 0; i < num_drawn; i++){
+            circles[i].updatePosition(dt);
+        }
+    }
+
+    void applyForce(){
+        for (int i = 0; i < num_drawn; i++){
+            circles[i].accelerate(force);
+        }
+    }
+
+    void applyForceToSingle(Circle &circle, sf::Vector2f force){
         circle.accelerate(force);
     }
 
-    void applyConstraint(Circle &circle){
-        // compute the distance from the center of the circle to the center of the window
-        sf::Vector2f vec_to_center = circle.pos - center;
-        float dist = sqrt(vec_to_center.x * vec_to_center.x + vec_to_center.y * vec_to_center.y);
-        if (dist > bounding_radius - circle.radius){
-            sf::Vector2f normal = vec_to_center / dist;
-            circle.pos  = center + normal * (bounding_radius - circle.radius);
+    void applyConstraint(){
+        for (int i = 0; i < num_drawn; i++){
+            // compute the distance from the center of the circle to the center of the window
+            sf::Vector2f vec_to_center = circles[i].pos - center;
+            float dist = sqrt(vec_to_center.x * vec_to_center.x + vec_to_center.y * vec_to_center.y);
+            if (dist > bounding_radius - circles[i].radius){
+                sf::Vector2f normal = vec_to_center / dist;
+                circles[i].pos  = center + normal * (bounding_radius - circles[i].radius);
+            }
         }
-        
+    }
+    // naive n^2 algorithm
+    void checkCollisions(){
+        for (int i = 0; i < num_drawn; i++){
+            for (int j = 0; j < num_drawn; j++){
+                if (i != j){
+                    sf::Vector2f vec_to_other = circles[i].pos - circles[j].pos;
+                    float dist = sqrt(vec_to_other.x * vec_to_other.x + vec_to_other.y * vec_to_other.y);
+                    // if the distance between the two is less than the sum of their radii, they are colliding
+                    if (dist < circles[i].radius + circles[j].radius){
+                        // compute the normal vector along the collision axis
+                        sf::Vector2f normal = vec_to_other / dist;
+                        // move the two objects till they don't collide anymore
+                        float delta = circles[i].radius + circles[j].radius - dist;
+                        circles[i].pos += .5f * delta * normal;
+                        circles[j].pos -= .5f * delta * normal;
+                    }
+                }
+            }
+        }
     }
 
-    //TODO: collision detection
-    
-
     void draw(sf::RenderWindow &window){
-        for (int i = 0; i < num_circles; i++){
+        for (int i = 0; i < num_drawn; i++){
             circles[i].updateShape();
             window.draw(circles[i].shape);
         }
     }
 
 };
-
-
 
 int main()
 {
@@ -180,6 +229,7 @@ int main()
     while (window.isOpen())
     {
         frame_num++;
+
         // check all the window's events that were triggered since the last iteration of the loop
         sf::Event event;
         while (window.pollEvent(event))
@@ -188,19 +238,28 @@ int main()
             if (event.type == sf::Event::Closed)
                 window.close();
         }
-
+        // based on the frame number, set the correct number of circles to be drawn
+        if (frame_num % 250 == 0){
+            if (sim.num_drawn < sim.num_circles){
+                sim.circles[sim.num_drawn].drawn = true;
+                sf::Vector2f spawnForce = {static_cast<float>(sin(sim.num_drawn/(10*2*3.14))),static_cast<float>(cos(sim.num_drawn/(10*2*3.14)))};
+                spawnForce *= 2000.0f;
+                sim.applyForceToSingle(sim.circles[sim.num_drawn], spawnForce);
+                sim.num_drawn++;
+            }
+        }
         // clear the window with black color
         window.clear(bg_color);
         // draw the bounding circle
         window.draw(sim.bounding_circle);
         // step the simulation forwards
         sim.update(sim.dt);
-        // draw the circles to the window
+        // draw the correct circles to the window
         sim.draw(window);
 
         // display frame number in top left
         window.draw(fps(frame_num, font));
-
+        window.draw(printDrawn(sim.num_drawn, font));
         // end the current frame
         window.display();
     }
